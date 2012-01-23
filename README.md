@@ -18,8 +18,8 @@ Attributes
 Usage
 =====
 
-`knife node secret add NODE PLAINTEXT openssldemo`
-`knife node show NODE -a openssldemo`
-`knife node run_list add NODE 'recipe[openssldemo]'`
-`ssh NODE chef-client`
-`ssh NODE cat /tmp/itworks`
+   `knife node secret add NODE PLAINTEXT openssldemo`
+   `knife node show NODE -a openssldemo`
+   `knife node run_list add NODE 'recipe[openssldemo]'`
+   `ssh NODE chef-client`
+   `ssh NODE cat /tmp/itworks`
