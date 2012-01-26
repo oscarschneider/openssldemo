@@ -1,5 +1,24 @@
 require 'chef/knife'
 
+class Mash
+
+  def nested_mash_with_value(array, value)
+    node = self
+    array.each_with_index do |e, i|
+      if node[e].nil?
+        if i == array.length - 1
+          node[e] = value
+        else
+          node[e] = Mash.new
+        end
+      end
+      node = node[e]
+    end
+    self
+  end
+  
+end
+
 class Chef
   class Knife
     class RoleSecretAdd < Knife
@@ -23,6 +42,11 @@ class Chef
       :boolean => true,
       :description => "Just check what would be done"
 
+      option :attribute_type,
+      :short => "-t TYPE",
+      :long => "--attribute-type TYPE",
+      :description => "TYPE is either default, normal, override. Default value is normal."
+
       def run
         unless name_args.length == 3
           show_usage
@@ -32,6 +56,8 @@ class Chef
           @plaintext = @name_args[1]
           @attribute = @name_args[2]
         end
+
+        @type = config[:attribute_type] || "normal"
 
         # Build the query
         query = "role:#{@rolename}"
@@ -56,19 +82,48 @@ class Chef
           @encrypted_string = Base64.encode64(@encryption_key.public_encrypt(@plaintext))
           @node = Chef::Node.load(n)
 
-          test_command = "@node." + @attribute
-          final_command = test_command + "='" + @encrypted_string + "'"
-          if config[:dry_run]
-           current = eval(test_command)
-           output "This would run #{final_command} on node #{n}. Current value for attribute  #{@attribute} is #{current}."
-          else
-            output "Ciphertext for node #{n} is #{@encrypted_string}." if config[:print_ciphertext]
-            eval(final_command)
-            @node.save
-            output "Successfully set attribute #{@attribute} for node #{n}."
+          if config[:print_ciphertext]
+            output "Ciphertext for node #{@nodename} is #{@encrypted_string}."
           end
-        end        
-      end
+
+          mash = Mash.new
+
+          mash.nested_mash_with_value(@attribute.split('.'), @encrypted_string)
+
+          current_value = @node.send("#{@type}_attrs")
+          @attribute.split('.').each do |part|
+            unless current_value.respond_to? :has_key?
+              ui.fatal "A sub path of attribute #{@attribute} seems not to be a Mash or Hash."
+              ui.fatal "Inspected object: \n #{current_value.inspect}."
+              ui.fatal "Exiting to avoid messing up the attribute tree."
+              exit 1
+            end
+            if current_value.has_key? part
+              current_value = current_value[part]
+            else
+              current_value = nil
+              break
+            end
+          end
+
+
+
+          dryrun_message = "Current value is:\n #{current_value}."
+          dryrun_message = "Currently this value is not set." unless current_value
+         
+          if config[:dry_run]
+            # Only output what would have been done
+            output "This would set #{@attribute} on node #{@nodename} to:"
+            output @encrypted_string
+            output dryrun_message
+          else
+            Chef::Mixin::DeepMerge.deep_merge!(mash, @node.send("#{@type}_attrs"))
+            @node.save
+            output "Successfully set attribute #{@attribute} on node #{@nodename}."
+          end
+        
+        end
+      end        
     end
   end
 end
