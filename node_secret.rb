@@ -1,6 +1,6 @@
 require 'chef/knife'
 
-class Mash
+class Mash < Hash
 
   def nested_mash_with_value(array, value)
     node = self
