@@ -11,3 +11,9 @@ plaintext = decrypt_secret(node[:openssldemo])
 file '/tmp/itworks' do
   content ( plaintext.inspect + "\n" + "Encrypted attribute:\n" + node[:openssldemo].inspect)
 end
+
+ciphertext = encrypt_secret("Ohai Chef webui client!", "chef-webui")
+
+file '/tmp/decryptme' do
+  content ciphertext
+end
