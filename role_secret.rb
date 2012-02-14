@@ -24,6 +24,9 @@ class Chef
     class RoleSecretAdd < Knife
 
       deps do
+        require 'chef/api_client'
+        require 'chef/node'
+        require 'chef/search/query'
         require 'openssl'
         require 'base64'
       end

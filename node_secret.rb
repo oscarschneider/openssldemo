@@ -25,6 +25,8 @@ class Chef
     class NodeSecretAdd < Knife
 
       deps do
+        require 'chef/api_client'
+        require 'chef/node'
         require 'openssl'
         require 'base64'
       end
